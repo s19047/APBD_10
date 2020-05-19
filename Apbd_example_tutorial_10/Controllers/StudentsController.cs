@@ -8,6 +8,7 @@ using Apbd_example_tutorial_10.DTOs.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Apbd_example_tutorial_10.Controllers
 {
@@ -170,43 +171,58 @@ namespace Apbd_example_tutorial_10.Controllers
 
                         await _studentContext.SaveChangesAsync();
 
-                    }
-                    else
+                    }else
                     {
                         enrollId = idEnrollment;
                     }
 
-                //check if index number was assigned to any other student , if not insert student 
-                var studentCount = await _studentContext.Student.Where(s => s.IndexNumber == request.IndexNumber).Select(s => new { countNum = s.IndexNumber.Count()}).FirstOrDefaultAsync();
+                    //check if index number was assigned to any other student , if not insert student 
+                    var studentCount = await _studentContext.Student.Where(s => s.IndexNumber == request.IndexNumber).Select(s => new { countNum = s.IndexNumber.Count()}).FirstOrDefaultAsync();
                 
-                    if (studentCount.countNum > 0)
+                        if (studentCount.countNum > 0)
+                        {
+                            return BadRequest("Student Already Exists");
+                        }
+
+                    var student = new Student
                     {
-                        return BadRequest("Student Already Exists");
-                    }
+                        IndexNumber = request.IndexNumber,
+                        FirstName = request.FirstName,
+                        LastName = request.LastName,
+                        BirthDate = request.BirthDate,
+                        IdEnrollment  = enrollId
+                    };
 
-                var student = new Student
-                {
-                    IndexNumber = request.IndexNumber,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName,
-                    BirthDate = request.BirthDate,
-                    IdEnrollment  = enrollId
-                };
+                    resp.IdEnrollment = enrollId;
+                    resp.IndexNumber = request.IndexNumber;
+                    resp.Semester = 1;
 
-                resp.IdEnrollment = enrollId;
-                resp.IndexNumber = request.IndexNumber;
-                resp.Semester = 1;
-
-                    
-                }
-                catch (Exception e)
-                {
-                    return BadRequest(e);
+                } catch (Exception e)
+                { 
+                        return BadRequest(e); 
                 }
 
                 return Ok(resp);
             }
 
+        public async Task<IActionResult> PromoteStudents(PromoteStudentRequest request)
+        {
+           
+            var resp = new CRUDStudentResponse();
+            
+                try
+                {
+                 var user = await _studentContext.Database.ExecuteSqlRawAsync("Exec PromoteStudents '"+request.Studies+"', "+request.Semester+";");
+                    
+                } catch (Exception e)
+                {
+                return BadRequest("Stored procedure didn't go as planned");
+                }
+
+
+            return Ok("Semester " + request.Semester + " students have been promoted to the next semester!");
         }
+
+    }
 
     }
